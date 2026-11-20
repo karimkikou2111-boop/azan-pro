@@ -1,0 +1,155 @@
+
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#073b2d">
+<title>آذان PRO</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#071f19;color:#fff;font-family:Arial,sans-serif;padding:18px}
+header{text-align:center;padding:22px;color:#e8c878}
+header h1{font-size:30px;margin:8px}
+header p{color:#b8c8bd}
+.card{background:#103b2e;border:1px solid #b99b503d;border-radius:20px;padding:18px;margin:14px 0}
+h2{color:#e8c878;font-size:19px}
+input,select{width:100%;padding:13px;margin:7px 0;border-radius:10px;border:1px solid #557568;background:#08291f;color:white;font-size:16px}
+button{background:#e8c878;color:#153629;border:0;padding:13px 17px;border-radius:11px;font-weight:bold;font-size:15px;margin:5px 0;cursor:pointer}
+.prayers{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.prayer{background:#ffffff10;padding:15px;border-radius:13px;text-align:center}
+.prayer span{display:block;color:#c4d3c9;font-size:14px}
+.prayer strong{display:block;color:#e8c878;font-size:23px;margin-top:8px}
+#status{color:#c4d3c9;font-size:13px;line-height:1.7}
+footer{text-align:center;color:#9aafa3;font-size:12px;margin:25px}
+</style>
+</head>
+<body>
+<header>
+<div style="font-size:45px">☾</div>
+<h1>آذان PRO</h1>
+<p>رفيقك لمواقيت الصلاة أينما كنت</p>
+</header>
+
+<div class="card">
+<h2>📍 موقعك ومواقيت الصلاة</h2>
+<input id="city" placeholder="اسم المدينة - مثال: Algiers">
+<input id="country" placeholder="الدولة - مثال: Algeria">
+<button onclick="searchCity()">عرض المواقيت</button>
+<button onclick="getLocation()">استخدم موقعي</button>
+<p id="status">اختر مدينتك لعرض مواقيت الصلاة.</p>
+</div>
+
+<div class="card">
+<h2>🕌 مواقيت الصلاة</h2>
+<div class="prayers" id="prayers">
+<div class="prayer"><span>الفجر</span><strong>--:--</strong></div>
+<div class="prayer"><span>الشروق</span><strong>--:--</strong></div>
+<div class="prayer"><span>الظهر</span><strong>--:--</strong></div>
+<div class="prayer"><span>العصر</span><strong>--:--</strong></div>
+<div class="prayer"><span>المغرب</span><strong>--:--</strong></div>
+<div class="prayer"><span>العشاء</span><strong>--:--</strong></div>
+</div>
+</div>
+
+<div class="card">
+<h2>⚙️ طريقة حساب المواقيت</h2>
+<select id="method">
+<option value="3">رابطة العالم الإسلامي</option>
+<option value="4">أم القرى - مكة</option>
+<option value="5">الهيئة المصرية</option>
+<option value="12">فرنسا</option>
+</select>
+<button onclick="searchCity()">تحديث المواقيت</button>
+</div>
+
+<div class="card">
+<h2>🕋 اتجاه القبلة</h2>
+<p id="qibla">حدد موقعك أولاً لحساب اتجاه القبلة.</p>
+</div>
+
+<div class="card">
+<h2>📅 التاريخ الهجري</h2>
+<p id="hijri">سيظهر بعد تحميل المواقيت.</p>
+</div>
+
+<footer>آذان PRO © 2026</footer>
+
+<script>
+let latitude=null,longitude=null;
+
+async function loadPrayer(url,place){
+ const status=document.getElementById("status");
+ status.textContent="جارٍ تحميل المواقيت...";
+ try{
+  const response=await fetch(url);
+  if(!response.ok)throw Error();
+  const result=await response.json();
+  if(result.code!==200)throw Error();
+  const d=result.data;
+  const t=d.timings;
+  const values=[
+   ["الفجر",t.Fajr],["الشروق",t.Sunrise],
+   ["الظهر",t.Dhuhr],["العصر",t.Asr],
+   ["المغرب",t.Maghrib],["العشاء",t.Isha]
+  ];
+  document.getElementById("prayers").innerHTML=values.map(x=>
+   `<div class="prayer"><span>${x[0]}</span><strong>${x[1].split(" ")[0]}</strong></div>`
+  ).join("");
+  document.getElementById("hijri").textContent=
+   d.date.hijri.day+" "+d.date.hijri.month.ar+" "+d.date.hijri.year+" هـ";
+  status.textContent="تم تحميل المواقيت: "+place;
+ }catch(e){
+  status.textContent="تعذر تحميل المواقيت. تحقق من الإنترنت واسم المدينة.";
+ }
+}
+
+function searchCity(){
+ const city=document.getElementById("city").value.trim();
+ const country=document.getElementById("country").value.trim();
+ const method=document.getElementById("method").value;
+ if(!city||!country){
+  document.getElementById("status").textContent="أدخل المدينة والدولة أولاً.";
+  return;
+ }
+ const url="https://api.aladhan.com/v1/timingsByCity?city="+
+ encodeURIComponent(city)+"&country="+encodeURIComponent(country)+
+ "&method="+method;
+ loadPrayer(url,city+", "+country);
+}
+
+function getLocation(){
+ if(!navigator.geolocation){
+  alert("تحديد الموقع غير مدعوم.");
+  return;
+ }
+ document.getElementById("status").textContent="جارٍ تحديد الموقع...";
+ navigator.geolocation.getCurrentPosition(pos=>{
+  latitude=pos.coords.latitude;
+  longitude=pos.coords.longitude;
+  const method=document.getElementById("method").value;
+  const url="https://api.aladhan.com/v1/timings/"+
+ Math.floor(Date.now()/1000)+"?latitude="+latitude+
+ "&longitude="+longitude+"&method="+method;
+  loadPrayer(url,"موقعك الحالي");
+  calculateQibla();
+ },()=>{
+  document.getElementById("status").textContent=
+  "لم يتم تحديد الموقع. ابحث عن مدينتك يدوياً.";
+ });
+}
+
+function calculateQibla(){
+ if(latitude===null)return;
+ const rad=x=>x*Math.PI/180;
+ const a=rad(latitude),b=rad(longitude);
+ const c=rad(21.4225),d=rad(39.8262);
+ const y=Math.sin(d-b);
+ const x=Math.cos(a)*Math.tan(c)-Math.sin(a)*Math.cos(d-b);
+ const angle=(Math.atan2(y,x)*180/Math.PI+360)%360;
+ document.getElementById("qibla").textContent=
+ "اتجاه القبلة: "+angle.toFixed(1)+"° من الشمال";
+}
+</script>
+</body>
+</html>
